@@ -91,6 +91,12 @@ class Loss(nn.Module):
  
     def forward_basic(self, output, gt):
         # pred: logits
+        is_ischemia_lss = self.get_bce(output['is_ischemia'].squeeze(1), gt['is_ischemia'])        
+        loss_dict = {'is_ischemia':is_ischemia_lss}
+        return loss_dict
+
+    def forward_spect(self, output, gt):
+        # pred: logits
         is_ischemia_lss = self.get_bce(output['is_ischemia'].squeeze(1), gt['is_ischemia']) 
         # SPECT
         spect_idx = torch.where(gt['SPECT_idx']==1)[0]
@@ -99,8 +105,27 @@ class Loss(nn.Module):
         qian_bi_lss = self.get_bce(output_spect['qian_bi'].squeeze(1)[spect_idx], gt['qian_bi'][spect_idx])
         jiange_bi_lss = self.get_bce(output_spect['jiange_bi'].squeeze(1)[spect_idx], gt['jiange_bi'][spect_idx])
         xia_bi_lss = self.get_bce(output_spect['xia_bi'].squeeze(1)[spect_idx], gt['xia_bi'][spect_idx])
-        ce_bi_lss = self.get_bce(output_spect['ce_bi'].squeeze(1)[spect_idx], gt['ce_bi'][spect_idx])        
+        ce_bi_lss = self.get_bce(output_spect['ce_bi'].squeeze(1)[spect_idx], gt['ce_bi'][spect_idx])                
         
+        loss_dict = {'is_ischemia':is_ischemia_lss, 
+                     'xin_jian':xin_jian_lss, 'qian_bi':qian_bi_lss, 'jiange_bi':jiange_bi_lss,
+                      'xia_bi':xia_bi_lss, 'ce_bi':ce_bi_lss,
+                     }
+        
+        return loss_dict
+
+
+    def forward_joint(self, output, gt):
+        # pred: logits
+        is_ischemia_lss = self.get_bce(output['is_ischemia'].squeeze(1), gt['is_ischemia'])       
+        # SPECT
+        spect_idx = torch.where(gt['SPECT_idx']==1)[0]
+        output_spect = output['output_spect']      
+        xin_jian_lss = self.get_bce(output_spect['xin_jian'].squeeze(1)[spect_idx], gt['xin_jian'][spect_idx])
+        qian_bi_lss = self.get_bce(output_spect['qian_bi'].squeeze(1)[spect_idx], gt['qian_bi'][spect_idx])
+        jiange_bi_lss = self.get_bce(output_spect['jiange_bi'].squeeze(1)[spect_idx], gt['jiange_bi'][spect_idx])
+        xia_bi_lss = self.get_bce(output_spect['xia_bi'].squeeze(1)[spect_idx], gt['xia_bi'][spect_idx])
+        ce_bi_lss = self.get_bce(output_spect['ce_bi'].squeeze(1)[spect_idx], gt['ce_bi'][spect_idx])           
         # CTA
         cta_idx = torch.where(gt['CTA_idx']==1)[0] 
         output_cta = output['output_cta']
@@ -108,14 +133,13 @@ class Loss(nn.Module):
         LCX_lss = self.get_bce(output_cta['LCX'].squeeze(1)[cta_idx], gt['LCX'][cta_idx])
         RCA_lss = self.get_bce(output_cta['RCA'].squeeze(1)[cta_idx], gt['RCA'][cta_idx])
         
-        # loss_dict = {'is_ischemia':is_ischemia_lss, 
-        #              'xin_jian':xin_jian_lss, 'qian_bi':qian_bi_lss, 'jiange_bi':jiange_bi_lss,
-        #               'xia_bi':xia_bi_lss, 'ce_bi':ce_bi_lss,
-        #               'LAD':LAD_lss, 'LCX':LCX_lss, 'RCA':RCA_lss 
-                    #  }
-        loss_dict = {'is_ischemia':is_ischemia_lss}
+        loss_dict = {'is_ischemia':is_ischemia_lss, 
+                      'xin_jian':xin_jian_lss, 'qian_bi':qian_bi_lss, 'jiange_bi':jiange_bi_lss,
+                      'xia_bi':xia_bi_lss, 'ce_bi':ce_bi_lss,
+                      'LAD':LAD_lss, 'LCX':LCX_lss, 'RCA':RCA_lss 
+                     }
         return loss_dict
-
+    
     def forward_cta(self, output, gt):
         # pred: logits
         is_ischemia_lss = self.get_bce(output['is_ischemia'].squeeze(1), gt['is_ischemia'])       
@@ -130,7 +154,6 @@ class Loss(nn.Module):
         loss_dict = {'is_ischemia':is_ischemia_lss, 
                       'LAD':LAD_lss, 'LCX':LCX_lss, 'RCA':RCA_lss 
                      }
-        # loss_dict = {'is_ischemia':is_ischemia_lss}
         return loss_dict
 
  

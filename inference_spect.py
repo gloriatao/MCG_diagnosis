@@ -6,14 +6,12 @@ import numpy as np
 import torch 
 from torch.utils.data import DataLoader
 from datasets.load_val import load_val
-from engines.engine_basic import inference
-from models.MCGNet_B_single import backbone
+from engines.engine_spect import inference
+from models.MCGNet_spect import backbone
 import warnings
 warnings.filterwarnings("ignore")
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0"
-# number of trainable params: 5,144,974
-# {'acc': 0.8294314381270903, 'sens': 0.8633879781420765, 'spec': 0.7758620689655172}
 
 import argparse
 def get_args_parser():
@@ -25,8 +23,7 @@ def get_args_parser():
     parser.add_argument('--output_dir', default='checkpoints/basic', help='path where to save, empty for no saving')
     parser.add_argument('--device', default='cuda', help='device to use for training / testing')
     parser.add_argument('--gpus', default=[0], help='device to use for training / testing')
-    parser.add_argument('--resume', default='checkpoints/basic_basic_t/checkpoint_0.8294314381270903.pth', help='resume from checkpoint')
-
+    parser.add_argument('--resume', default='checkpoints/basic/checkpoint_0.7692307692307693.pth', help='resume from checkpoint')
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N', help='start epoch')
     parser.add_argument('--start_iteration', default=1, type=int)
     parser.add_argument('--num_workers', default=4, type=int)
@@ -65,9 +62,6 @@ def main(args):
         os.mkdir(output_dir)
 
     results = inference(model, data_loader_val_ni, data_loader_val_spect, data_loader_val_cta, device)
-    # {'acc': 0.7692307692307693, 'sens': 0.6939890710382514, 'spec': 0.8879310344827587}
-    # {'acc': 0.6722408026755853, 'sens': 0.9289617486338798, 'spec': 0.2672413793103448}
-    # {'acc': 0.7424749163879598, 'sens': 0.8524590163934426, 'spec': 0.5689655172413793}
     print()
         
         

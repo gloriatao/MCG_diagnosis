@@ -8,15 +8,15 @@ from torch.utils.data import DataLoader
 
 from datasets.load_train import load_train
 from datasets.load_val import load_val
-from engines.engine_basic import train_one_epoch
-from models.MCGNet_B_single import backbone
+from engines.engine_spect import train_one_epoch
+from models.MCGNet_spect import backbone
 from timm.scheduler.cosine_lr import CosineLRScheduler
 from apex import amp
 import warnings
 warnings.filterwarnings("ignore")
 
 os.environ['CUDA_VISIBLE_DEVICES'] = "0, 1"
-# number of trainable params: 5,144,974
+
 
 import argparse
 def get_args_parser():
@@ -25,11 +25,10 @@ def get_args_parser():
     parser.add_argument('--epochs', default=500, type=int)
     parser.add_argument('--clip_max_norm', default=0.1, type=float, help='gradient clipping max norm')
     # parameters
-    parser.add_argument('--output_dir', default='checkpoints/basic_basic_t', help='path where to save, empty for no saving')
+    parser.add_argument('--output_dir', default='checkpoints/basic_spect', help='path where to save, empty for no saving')
     parser.add_argument('--device', default='cuda', help='device to use for training / testing')
     parser.add_argument('--gpus', default=[0, 1], help='device to use for training / testing')
     parser.add_argument('--resume', default=None, help='resume from checkpoint')
-    # parser.add_argument('--resume', default='/media/cygzz/data/rtao/projects/MCG-NC/checkpoints/basic_basic_t/checkpoint_0.8294314381270903.pth', help='resume from checkpoint')
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N', help='start epoch')
     parser.add_argument('--start_iteration', default=1, type=int)
     parser.add_argument('--num_workers', default=4, type=int)
@@ -55,7 +54,7 @@ def main(args):
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad==False)
     print('number of frozen params:', n_parameters)
 
-    dataset_train = load_train(fold=0, bs=2)    
+    dataset_train = load_train(fold=0, bs=2)
     dataset_val_ni = load_val(fold=0, type='NI')
     dataset_val_cta = load_val(fold=0, type='CTA')
     dataset_val_spect = load_val(fold=0, type='SPECT')
@@ -102,7 +101,7 @@ def main(args):
         os.mkdir(val_log_dir)
 
     # train loop--------------------------------------
-    benchmark_metric, steps = 0.7, 0.0
+    benchmark_metric, steps = 0.0, 0.0
     iteration = args.start_iteration
     print('start iteration:', iteration)
     for epoch in range(args.start_epoch, args.epochs):
