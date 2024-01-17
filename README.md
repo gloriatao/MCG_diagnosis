@@ -1,6 +1,4 @@
-# MCG_diagnosis
-
-Prospective Evaluation of Magnetocardiography on Diagnosis and Localization of Ischemic Heart Disease
+# Prospective Evaluation of Magnetocardiography on Diagnosis and Localization of Ischemic Heart Disease
 
 Abstract
 Early identification of ischemic heart disease (IHD) is crucial for effective prevention and management. Magnetocardiography (MCG) has emerged as a promising solution for noninvasive, noncontact, nonradiative, and high-sensitivity assessment of cardiac functions. 
