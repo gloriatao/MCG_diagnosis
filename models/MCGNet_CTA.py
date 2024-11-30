@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 from models.miniVIT import VIT
@@ -33,6 +34,7 @@ class BasicBlock3d(nn.Module):
         out += residual
 
         return out
+
 
 class BottleNeck3d(nn.Module):
     expansion = 1
@@ -85,6 +87,7 @@ class BottleNeck3d(nn.Module):
 
         return out
 
+
 class SEblock3D(nn.Module):
     def __init__(self, inplanes):
         super(SEblock3D, self).__init__()
@@ -105,6 +108,7 @@ class SEblock3D(nn.Module):
         out = self.sigmoid(out)
 
         return x * out
+
 
 class backbone(nn.Module):
     def __init__(self, input_channel=1, hidden=48):
@@ -129,24 +133,18 @@ class backbone(nn.Module):
         self.layers2_2.add_module('layer_2_2_2', self._make_layer3d(BottleNeck3d, self.inplanes, 1, stride=(2, 1), size=self.ks[2], conv_num=2))
 
         
-        self.trans_layers = VIT(n_embd=hidden*2, n_layer=18, n_head=8)
+        self.trans_layers = VIT(n_embd=hidden*2, n_layer=9, n_head=8)
         self.cls_token = nn.Parameter(torch.zeros(1, 1, hidden*2, 6, 6)) #  b, seq_len, c, w, h 
-        
-        
-        
         self.is_ischemia = MLP(hidden*2, hidden, 1, 3) # bce
-        # SPECT
-        self.ischemia_intensity = MLP(hidden*2, hidden, 1, 3)  # regress
-        self.ischemia_area = MLP(hidden*2, hidden, 1, 3) # regress
-        self.xin_jian = MLP(hidden*2, hidden, 1, 3) # bce
-        self.qian_bi = MLP(hidden*2, hidden, 1, 3) # bce
-        self.jiange_bi = MLP(hidden*2, hidden, 1, 3) # bce
-        self.xia_bi = MLP(hidden*2, hidden, 1, 3) # bce
-        self.ce_bi = MLP(hidden*2, hidden, 1, 3) # bce
+              
+
         # CTA
-        self.LAD = MLP(hidden*2, hidden, 1, 3) # bce
-        self.LCX = MLP(hidden*2, hidden, 1, 3) # bce
-        self.RCA = MLP(hidden*2, hidden, 1, 3) # bce
+        self.trans_LAD_cta = VIT(n_embd=hidden*2, n_layer=9, n_head=8)
+        self.trans_LCX_cta = VIT(n_embd=hidden*2, n_layer=9, n_head=8)
+        self.trans_RCA_cta = VIT(n_embd=hidden*2, n_layer=9, n_head=8)
+        self.LAD_cta = MLP(hidden*2, hidden, 1, 3) # bce
+        self.LCX_cta = MLP(hidden*2, hidden, 1, 3) # bce
+        self.RCA_cta = MLP(hidden*2, hidden, 1, 3) # bce
                
 
     def _make_layer3d(self, block, planes, blocks, stride=(1, 1, 2), size=15, conv_num=1):
@@ -167,15 +165,14 @@ class backbone(nn.Module):
         return nn.Sequential(*layers)
 
 
-    def forward(self, qrs, t, return_feat=False):       
-        # t
-        x0 = t.clone()
+    def forward(self, qrs, t, return_feat=False):        
+        # qrs
+        x0 = qrs.clone() #!!!!!!!!!!!!!!!!!!!!!
         x0 = self.relu(self.bn1(self.conv1(x0)))
         x0 = self.layers1(x0)
         x2_1 = self.layers2_1(x0)
         x2_2 = self.layers2_2(x0)
 
-        
         out_t = torch.cat([x2_1, x2_2], dim=1) 
         b,c,w,h,seq_len = out_t.shape
         out_t = out_t.permute(0,4,1,2,3)  #  b, seq_len, c, w, h 
@@ -183,36 +180,39 @@ class backbone(nn.Module):
         feat_t = torch.cat((cls_tokens_t, out_t), dim = 1)
         feat_t = self.trans_layers(feat_t) # 2, 26, 166, 6, 6
         cls_head_t = feat_t[:,0,:,:,:] #2, 144, 6, 6]
-        avg_cls_head_t = F.adaptive_max_pool2d(output_size=1, input=cls_head_t).squeeze()
-        
-        # fusion or not
-        avg_cls_head = avg_cls_head_t
-        
+        avg_cls_head = F.adaptive_max_pool2d(output_size=1, input=cls_head_t).squeeze()
+               
         # prediction head
         is_ischemia = self.is_ischemia(avg_cls_head)
-        # SPECT
-        ischemia_intensity = self.ischemia_intensity(avg_cls_head)
-        ischemia_area = self.ischemia_area(avg_cls_head)
-        xin_jian = self.xin_jian(avg_cls_head)
-        qian_bi = self.qian_bi(avg_cls_head)
-        jiange_bi = self.jiange_bi(avg_cls_head)
-        xia_bi = self.xia_bi(avg_cls_head)
-        ce_bi = self.ce_bi(avg_cls_head)
-        # CTA
-        LAD = self.LAD(avg_cls_head)
-        LCX = self.LCX(avg_cls_head)
-        RCA = self.RCA(avg_cls_head)        
 
-        output_spect = {'ischemia_intensity':ischemia_intensity, 'ischemia_area':ischemia_area,
-                        'xin_jian':xin_jian, 'qian_bi':qian_bi,'jiange_bi': jiange_bi, 'xia_bi':xia_bi, 'ce_bi':ce_bi}        
+        feat_lad = self.trans_LAD_cta(feat_t)
+        cls_head_lad = feat_lad[:,0,:,:,:] #2, 144, 6, 6]
+        avg_cls_head_lad = F.adaptive_max_pool2d(output_size=1, input=cls_head_lad).squeeze()        
+        LAD = self.LAD_cta(avg_cls_head_lad)
+
+        feat_lcx = self.trans_LCX_cta(feat_t)
+        cls_head_lcx = feat_lcx[:,0,:,:,:] #2, 144, 6, 6]
+        avg_cls_head_lcx = F.adaptive_max_pool2d(output_size=1, input=cls_head_lcx).squeeze()        
+        LCX = self.LCX_cta(avg_cls_head_lcx)
+        
+        feat_rca = self.trans_RCA_cta(feat_t)
+        cls_head_rca = feat_rca[:,0,:,:,:] #2, 144, 6, 6]
+        avg_cls_head_rca = F.adaptive_max_pool2d(output_size=1, input=cls_head_rca).squeeze()        
+        RCA = self.RCA_cta(avg_cls_head_rca)                
+       
+       
         output_cta = {'LAD':LAD, 'LCX':LCX, 'RCA':RCA}
-        ouput_dict = {'is_ischemia':is_ischemia, 'output_spect':output_spect, 'output_cta':output_cta}
+        ouput_dict = {'is_ischemia':is_ischemia, 'output_spect':None, 'output_cta':output_cta}
+        
         if return_feat == False:        
             return ouput_dict
-        else:
-            feat_ischemia = avg_cls_head_t.unsqueeze(1)
-            return feat_ischemia
-
+        elif return_feat:
+            feat_LAD= avg_cls_head_lad.unsqueeze(1)
+            feat_LCX = avg_cls_head_lcx.unsqueeze(1)
+            feat_RCA = avg_cls_head_rca.unsqueeze(1) 
+            feat_spect = torch.cat((feat_LAD, feat_RCA, feat_LCX),dim=1)
+            # xin jian,	qian bi,	jiange bi,	xia bi,	ce bi,	Lad,	rca,	lcx
+            return feat_spect
 
 class MLP(nn.Module):
     """ Very simple multi-layer perceptron (also called FFN)"""
@@ -233,7 +233,7 @@ def test():
     x = torch.randn([8, 1, 6, 6, 100])
     n_parameters = sum(p.numel() for p in net.parameters() if p.requires_grad)
     print('number of params:', n_parameters)
-    net(x, x)  # 1, 1152, 150
+    net(x, x, return_feat=True)  # 1, 1152, 150
 
 # torch.Size([2, 1, 6, 6, 600]) torch.Size([2]) torch.Size([2, 1, 5, 600]) torch.Size([2, 4])
 # 30,000,000   5,144,974

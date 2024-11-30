@@ -16,21 +16,29 @@ import time
 import sklearn as sk
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_curve, auc, accuracy_score
+from engines.metrics_with_CI import metrics_CI
 
 def cal_metrics(pred, gt):
-    pred[pred>=0.5] = 1
-    pred[pred<0.5] = 0    
-    cm = confusion_matrix(gt, pred, labels=[0, 1])
-    total=sum(sum(cm))
-    acc=(cm[0,0]+cm[1,1])/total
-    sens = cm[0,0]/(cm[0,0]+cm[0,1])
-    spec = cm[1,1]/(cm[1,0]+cm[1,1])
-    try:
-        auc = roc_auc_score(gt, pred, labels=[0, 1])
-    except:
-        auc = -1
-    results = {'acc':acc, 'sens':sens, 'spec':spec, 'auc':auc}
+    
+    fpr, tpr, threshold = roc_curve(gt, pred)
+    auc_value = auc(fpr, tpr)
+    optimal_idx = np.argmax(tpr - fpr)
+    optimal_threshold = threshold[optimal_idx]
+    
+    pred[pred>=optimal_threshold] = 1
+    pred[pred<optimal_threshold] = 0    
+    
+  
+    TN, FP, FN, TP = confusion_matrix(gt, pred, labels=[0, 1]).ravel() #tn, fp, fn, tp
+    
+    sens, spec, sens_CI, spec_CI, NPV, NPV_CI, PPV, PPV_CI, acc, acc_CI, F1, F1_CI\
+        = metrics_CI(TP, FP, FN, TN, alpha=0.95) #TP, FP, FN, TN,
+    results = {'acc':acc, 'sens':sens, 'spec':spec, 'auc':auc_value, 'f1':F1, 'NPV':NPV, 'PPV':PPV,
+               'sens_CI':sens_CI, 'spec_CI':spec_CI, 'NPV_CI':NPV_CI, 'PPV_CI':PPV_CI, 'acc_CI':acc_CI,'F1_CI':F1_CI, 
+               'opt_point':optimal_threshold}
     return results
+
 
 
 def print_results(output, input):

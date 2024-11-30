@@ -167,7 +167,7 @@ class backbone(nn.Module):
         return nn.Sequential(*layers)
 
 
-    def forward(self, qrs, t, return_feat=False):       
+    def forward(self, qrs, t):       
         # t
         x0 = t.clone()
         x0 = self.relu(self.bn1(self.conv1(x0)))
@@ -207,11 +207,8 @@ class backbone(nn.Module):
                         'xin_jian':xin_jian, 'qian_bi':qian_bi,'jiange_bi': jiange_bi, 'xia_bi':xia_bi, 'ce_bi':ce_bi}        
         output_cta = {'LAD':LAD, 'LCX':LCX, 'RCA':RCA}
         ouput_dict = {'is_ischemia':is_ischemia, 'output_spect':output_spect, 'output_cta':output_cta}
-        if return_feat == False:        
-            return ouput_dict
-        else:
-            feat_ischemia = avg_cls_head_t.unsqueeze(1)
-            return feat_ischemia
+                
+        return ouput_dict
 
 
 class MLP(nn.Module):

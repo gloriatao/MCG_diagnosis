@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from datasets.load_train import load_train
 from datasets.load_val import load_val
 from engines.engine_basic import train_one_epoch
-from models.MCGNet_B_single import backbone
+from models.MCGNet_B_single_old import backbone
 from timm.scheduler.cosine_lr import CosineLRScheduler
 from apex import amp
 import warnings
