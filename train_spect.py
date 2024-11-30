@@ -6,10 +6,10 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from datasets.load_train import load_train
+from datasets.load_train_aug import load_train
 from datasets.load_val import load_val
 from engines.engine_spect import train_one_epoch
-from models.MCGNet_spect import backbone
+from models.MCGNet import backbone
 from timm.scheduler.cosine_lr import CosineLRScheduler
 from apex import amp
 import warnings
